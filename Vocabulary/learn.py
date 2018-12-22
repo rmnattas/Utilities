@@ -83,7 +83,7 @@ def getWords():
     # https://www.twilio.com/blog/2017/02/an-easy-way-to-read-and-write-to-a-google-spreadsheet-in-python.html
     # Get words list from Googel Drive Sheet
     scope = ['https://www.googleapis.com/auth/drive', 'https://spreadsheets.google.com/feeds']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name('client_secrets.json', scope)
     client = gspread.authorize(creds)
     sheet = client.open("Vocabulary").sheet1
     cells = sheet.col_values(1)
