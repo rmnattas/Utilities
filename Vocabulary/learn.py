@@ -7,6 +7,7 @@ It's an app that takes a list words and presents a translation, definition, and 
 
 APIs:
 - googletrans API (rip off of google translate...)
+    [Jan'19]: API shutdown, change to Wordnik API.
 - Google spreadsheet API
 
 Added Features:
@@ -22,7 +23,7 @@ Added Features:
 
 
 import random
-from googletrans import Translator
+from wordnik import *
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -111,55 +112,61 @@ def selectWord(words, groups, group):
     randint = random.randint(group_range[0], group_range[1])
     return words[randint]
 
+
 def getWordData(word):
     print("Loading Word Info.....")
-    translator = Translator()
-    data = translator.translate(word, src="en", dest="ar").extra_data
-    
+    word = word.lower()
     word_data = {}
+
+    f = open("key.txt", "r")
+    apiKey = f.readline().strip()
+    apiUrl = 'http://api.wordnik.com/v4'
+    client = swagger.ApiClient(apiKey, apiUrl) 
+    wordApi = WordApi.WordApi(client)
     
-    pos_trans = []
-    for translate in data["possible-translations"][0][2]:
-        pos_trans.append(translate[0])
-    if pos_trans: 
-        word_data["possible-translations"] = pos_trans
+
+    # get definitions
+    defs = wordApi.getDefinitions(word)
+    word_defs = []
+    for definition in defs:
+        word_defs.append(definition.text)
+    word_data["definitions"] = word_defs
+
+
+    # get examples
+    exs = wordApi.getExamples(word)
+    word_exs = []
+    for examp in exs.examples:
+        word_exs.append(examp.text)
+    word_data["examples"] = word_exs
+
+
+    # get synonyms
+    syns = wordApi.getRelatedWords(word)
+    word_syns = []
+    for relation in syns:
+        if (relation.relationshipType == "equivalent" or relation.relationshipType == "synonym"):
+            word_syns.extend(relation.words)
+    word_data["synonyms"] = word_syns
+
     
-    
-    all_trans = []
-    if data["all-translations"]:
-        for partOfSpeech in data["all-translations"]:
-            trans_list = []
-            for translate in partOfSpeech[2]:
-                trans_list.append(translate[0])
-            all_trans.append([POS(partOfSpeech[0]), trans_list])
-    if all_trans:
-        word_data["all-translations"] = all_trans
-        
-        
-    definitions = []
-    if data["definitions"]:
-        for partOfSpeech in data["definitions"]:
-            POS_def_list = []  
-            for definition in partOfSpeech[1]:
-                defi = cab(definition[0])
-                example = None
-                if len(definition) == 3:
-                    example = cab(definition[2])
-                POS_def_list.append([defi, example])
-            definitions.append([POS(partOfSpeech[0]), POS_def_list])
-    if definitions:
-        word_data["definitions"] = definitions
-        
-    
-    synonyms = []
-    if data["synonyms"]:
-        for partOfSpeech in data["synonyms"]:
-            syn_list = []
-            for synonym in partOfSpeech[1]:
-                syn_list.append(cab(synonym[0][0]))
-            synonyms.append([POS(partOfSpeech[0]), syn_list])
-    if synonyms:
-        word_data["synonyms"] = synonyms        
+#    pos_trans = []
+#    for translate in data["possible-translations"][0][2]:
+#        pos_trans.append(translate[0])
+#    if pos_trans: 
+#        word_data["possible-translations"] = pos_trans
+#    
+#    
+#    all_trans = []
+#    if data["all-translations"]:
+#        for partOfSpeech in data["all-translations"]:
+#            trans_list = []
+#            for translate in partOfSpeech[2]:
+#                trans_list.append(translate[0])
+#            all_trans.append([POS(partOfSpeech[0]), trans_list])
+#    if all_trans:
+#        word_data["all-translations"] = all_trans
+#    
     
     return word_data
 
@@ -175,30 +182,28 @@ def printWordInfo(word, words_dic=False):
             
 
             
-    print("\n" + "Translate:")
-    for translate in word_info["possible-translations"]:
-        print("\t" + translate)
-    if "all-translations" in word_info:
-        for partOfSpeech in word_info["all-translations"]:
-            print("\t" + partOfSpeech[0] + ":")
-            print("\t\t" + "، ".join(partOfSpeech[1]))
-    
+#    print("\n" + "Translate:")
+#    for translate in word_info["possible-translations"]:
+#        print("\t" + translate)
+#    if "all-translations" in word_info:
+#        for partOfSpeech in word_info["all-translations"]:
+#            print("\t" + partOfSpeech[0] + ":")
+#            print("\t\t" + "، ".join(partOfSpeech[1]))
+#    
     
     if "definitions" in word_info:
-        print("\n" + "Definitions and Examples:")
-        for partOfSpeech in word_info["definitions"]:
-            print("\t" + partOfSpeech[0] + ":")
-            for definition in partOfSpeech[1]:
-                print("\t\t" + definition[0])
-                if definition[1]:
-                    print('\t\t\t"' + definition[1] + '"')
+        print("\n" + "*Definitions:")
+        for defin in word_info["definitions"]:
+            print("\t-" + defin )
     
+    if "examples" in word_info:
+        print("\n" + "*Examples:")
+        for examp in word_info["examples"]:
+            print("\t-" + examp )
     
     if "synonyms" in word_info:
-        print("\n" + "Synonyms:")
-        for partOfSpeech in word_info["synonyms"]:
-            print("\t" + partOfSpeech[0] + ":")
-            print("\t\t" + ", ".join(partOfSpeech[1]))
+        print("\n" + "*Synonyms:")
+        print("\t" + ", ".join(word_info["synonyms"]))
 
 
 def newWord(words):
@@ -245,6 +250,7 @@ def showGroup(words, groups, group):
 def cab(string):
     #Cabitalize the first letter in a string
     return string[0].upper() + string[1:]
+
 
 def POS(partOfSpeech):
     #Convert part of speech to english
