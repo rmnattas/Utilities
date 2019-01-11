@@ -16,7 +16,7 @@ Added Features:
 - words direrctly from Google spreadsheet 
 - add new words to Google spreadsheet
 - show group
-- chech if word in list
+- check if word in list
 - select a word
 
 """
