@@ -1,5 +1,5 @@
 """
-Jan 2018
+Jan 2019
 quickWord.py
 
 This app takes a word from std input and given def, synonyms, and examples for it.
